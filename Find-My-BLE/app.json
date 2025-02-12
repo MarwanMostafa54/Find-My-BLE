@@ -2,6 +2,11 @@
   "expo": {
     "name": "Find-My-BLE",
     "slug": "Find-My-BLE",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "extra": {
+      "eas": {
+        "projectId": "43af16b1-e23b-4893-b5ba-daca17e5640c"
+      }
+    }
   }
 }
