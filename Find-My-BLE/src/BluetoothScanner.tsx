@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Button, Alert, FlatList, PermissionsAndroid, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Button, Alert, FlatList, PermissionsAndroid, Platform, TouchableOpacity } from 'react-native';
 import * as Location from 'expo-location';
 import { BleManager, Device } from 'react-native-ble-plx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,8 +11,10 @@ const BluetoothScanner = () => {
     const [isScanning, setIsScanning] = useState<boolean>(false);
     const [connectedDevice, setConnectedDevice] = useState<Device | null>(null);
     const bleManager = new BleManager();
-    const [itagData, setItagData] = useState(null); // New state for the retrieved data
-     const [refreshing, setRefreshing] = useState(false); // For FlatList refreshing
+    const [itagData, setItagData] = useState(null);
+    const [refreshing, setRefreshing] = useState(false);
+    const [knownDeviceIds, setKnownDeviceIds] = useState<string[]>([]);
+    const scanIntervalId = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         (async () => {
@@ -25,7 +27,7 @@ const BluetoothScanner = () => {
                     [{ text: 'OK' }]
                 );
             }
-
+            await fetchKnownDeviceIds();
             const savedDeviceId = await AsyncStorage.getItem('connectedDeviceId');
             if (savedDeviceId) {
                 reconnectToDevice(savedDeviceId);
@@ -33,10 +35,31 @@ const BluetoothScanner = () => {
 
             return () => {
                 bleManager.destroy();
+                if (scanIntervalId.current) {
+                    clearInterval(scanIntervalId.current);
+                }
             };
         })();
     }, []);
 
+    const fetchKnownDeviceIds = async () => {
+        try {
+            const apiUrl = 'http://localhost:5000/api/itag_data';
+            const response = await axios.get(apiUrl);
+
+            if (response.status === 200) {
+                const deviceIds = response.data.data.map((item: any) => item.deviceId);
+                setKnownDeviceIds(deviceIds);
+                console.log("Known device IDs:", deviceIds);
+            } else {
+                console.error("Error fetching known device IDs:", response.status, response.data);
+                Alert.alert('Data Fetch Error', `Failed to fetch known device IDs. Status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error("Error fetching known device IDs:", error);
+            Alert.alert('Data Fetch Error', 'Failed to fetch known device IDs. Check console for details.');
+        }
+    };
     const reconnectToDevice = async (deviceId: string) => {
         try {
             const device = await bleManager.connectToDevice(deviceId);
@@ -58,89 +81,84 @@ const BluetoothScanner = () => {
             AsyncStorage.removeItem('connectedDeviceId');
         }
     };
-
     const scanForBleDevices = async () => {
-    setIsScanning(true);
-    setDevices([]);
-    const scannedDeviceIds: string[] = []; // To store scanned device IDs
+        setIsScanning(true);
+        setDevices([]);
+        const scannedDeviceIds: string[] = [];
 
-    if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.requestMultiple([
-            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-            PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-            PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-        ]);
+        if (Platform.OS === 'android') {
+            const granted = await PermissionsAndroid.requestMultiple([
+                PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+                PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+                PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+            ]);
 
-        if (
-            granted[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] !== PermissionsAndroid.RESULTS.GRANTED ||
-            granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN] !== PermissionsAndroid.RESULTS.GRANTED ||
-            granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT] !== PermissionsAndroid.RESULTS.GRANTED
-        ) {
-            setIsScanning(false);
-            Alert.alert('Required permissions not granted for Bluetooth scanning');
-            return;
-        }
-    }
-
-    bleManager.startDeviceScan(
-        null,
-        null,
-        (error, device) => {
-            if (error) {
+            if (
+                granted[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] !== PermissionsAndroid.RESULTS.GRANTED ||
+                granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN] !== PermissionsAndroid.RESULTS.GRANTED ||
+                granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT] !== PermissionsAndroid.RESULTS.GRANTED
+            ) {
                 setIsScanning(false);
-                console.error('Error during device scan:', error);
-                Alert.alert('Scan Error', 'Error occurred during Bluetooth device scan.');
+                Alert.alert('Required permissions not granted for Bluetooth scanning');
                 return;
             }
-
-            if (device) {
-                scannedDeviceIds.push(device.id);  // Collect the device ID
-                setDevices(prevDevices => {
-                    const alreadyExists = prevDevices.some(d => d.id === device.id);
-                    if (alreadyExists) {
-                        return prevDevices;
-                    } else {
-                       return [...prevDevices, device];
-                    }
-                });
-            }
         }
-    );
+        bleManager.startDeviceScan(
+            null,
+            null,
+            (error, device) => {
+                if (error) {
+                    setIsScanning(false);
+                    console.error('Error during device scan:', error);
+                    Alert.alert('Scan Error', 'Error occurred during Bluetooth device scan.');
+                    return;
+                }
 
-    setTimeout(async () => {
-        bleManager.stopDeviceScan();
-        setIsScanning(false);
+                if (device) {
+                    scannedDeviceIds.push(device.id);
+                    setDevices(prevDevices => {
+                        const alreadyExists = prevDevices.some(d => d.id === device.id);
+                        if (alreadyExists) {
+                            return prevDevices;
+                        } else {
+                           return [...prevDevices, device];
+                        }
+                    });
+                }
+            }
+        );
+        setTimeout(async () => {
+            bleManager.stopDeviceScan();
+            setIsScanning(false);
 
-        // Send scanned device IDs to the backend
-        try {
-            const apiUrl = 'http://localhost:5000/api/itag_data/connect'; // Replace with your backend URL
-            const response = await axios.post(apiUrl, {
-                scannedDeviceIds: scannedDeviceIds,
-            });
+            // Send scanned device IDs to the backend
+            try {
+                const apiUrl = 'http://localhost:5000/api/itag_data/connect';
+                const response = await axios.post(apiUrl, {
+                    scannedDeviceIds: scannedDeviceIds,
+                });
 
-            if (response.status === 200) {
-                const deviceIdToConnect = response.data.deviceId;
-                if (deviceIdToConnect) {
-                    console.log(`Backend says: connect to device: ${deviceIdToConnect}`);
-                    // Find device in the devices list, connect.
-                    const deviceToConnect = devices.find(device => device.id === deviceIdToConnect);
-                    if (deviceToConnect) {
-                        connectToDevice(deviceToConnect);
+                if (response.status === 200) {
+                    const deviceIdToConnect = response.data.deviceId;
+                    if (deviceIdToConnect) {
+                        console.log(`Backend says: connect to device: ${deviceIdToConnect}`);
+                        const deviceToConnect = devices.find(device => device.id === deviceIdToConnect);
+                        if (deviceToConnect) {
+                            connectToDevice(deviceToConnect);
+                        }
+                    } else {
+                        console.log("Backend says: no device to connect to.");
                     }
                 } else {
-                    console.log("Backend says: no device to connect to.");
+                    console.error("Error communicating with backend:", response.status, response.data);
+                    Alert.alert('Backend Error', 'Failed to communicate with backend.');
                 }
-            } else {
-                console.error("Error communicating with backend:", response.status, response.data);
-                Alert.alert('Backend Error', 'Failed to communicate with backend.');
+            } catch (error) {
+                console.error("Error sending scanned device IDs:", error);
+                Alert.alert('Network Error', 'Failed to send scanned device IDs. Check console.');
             }
-
-        } catch (error) {
-            console.error("Error sending scanned device IDs:", error);
-            Alert.alert('Network Error', 'Failed to send scanned device IDs. Check console.');
-        }
-    }, 10000);
-};
+        }, 10000);
+    };
 
     const connectToDevice = async (device: Device) => {
         try {
@@ -158,10 +176,10 @@ const BluetoothScanner = () => {
                 AsyncStorage.removeItem('connectedDeviceId');
                 disconnectionSubscription.remove();
             });
-
         } catch (error) {
             console.error("Connection failed:", error);
             Alert.alert("Connection Failed", "Could not connect to the selected device.");
+            AsyncStorage.removeItem('connectedDeviceId'); // Clear saved ID on failure
         }
     };
 
@@ -179,25 +197,20 @@ const BluetoothScanner = () => {
         try {
             const location = await Location.getCurrentPositionAsync({});
             const { latitude, longitude } = location.coords;
-
-            // Use axios to send data to your backend API
-            const apiUrl = 'http://localhost:5000/api/itag_data'; // Replace with your backend URL
+            const apiUrl = 'http://localhost:5000/api/itag_data';
             const requestData = {
                 deviceId: deviceId,
                 latitude: latitude,
                 longitude: longitude,
                 state: state,
             };
-
-        const response = await axios.post(apiUrl, requestData, {
-            headers: {
-                'Content-Type': 'application/json' // <--- ADD THIS
-            }
-        });
-
+            const response = await axios.post(apiUrl, requestData, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
             if (response.status === 200 || response.status === 201) {
                 console.log('Data successfully sent to MongoDB!');
-
             } else {
                 console.error('Error sending data to MongoDB:', response.status, response.data);
                 Alert.alert('MongoDB Error', `Failed to send data. Status: ${response.status}`);
@@ -209,32 +222,42 @@ const BluetoothScanner = () => {
         }
     };
 
+    const renderDeviceItem = ({ item }: { item: Device }) => (
+        <View style={styles.deviceItem}>
+            <Text style={styles.deviceName}>{item.name || 'Unknown Device'}</Text>
+            <Text style={styles.deviceId}>{item.id}</Text>
+            <TouchableOpacity
+                style={[
+                    styles.button,
+                    connectedDevice ? styles.buttonDisabled : {} // Apply disabled style if connected
+                ]}
+                onPress={() => connectToDevice(item)}
+                disabled={connectedDevice !== null}
+            >
+                <Text style={styles.buttonText}>Connect</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Bluetooth Scanner</Text>
 
             {/* Scan for Devices Button */}
-            <Button
-                title={isScanning ? "Scanning..." : "Scan for Devices"}
+            <TouchableOpacity
+                style={styles.button}
                 onPress={scanForBleDevices}
                 disabled={isScanning || !!connectedDevice}
-            />
+            >
+                <Text style={styles.buttonText}>{isScanning ? "Scanning..." : "Scan for Devices"}</Text>
+            </TouchableOpacity>
 
             {/* Display Discovered Devices */}
             <FlatList
                 data={devices}
                 keyExtractor={item => item.id}
-                renderItem={({ item }) => (
-                    <View style={styles.deviceItem}>
-                        <Text style={styles.deviceName}>{item.name || 'Unknown Device'}</Text>
-                        <Text style={styles.deviceId}>{item.id}</Text>
-                        <Button
-                            title="Connect"
-                            onPress={() => connectToDevice(item)}
-                            disabled={connectedDevice !== null}
-                        />
-                    </View>
-                )}
+                renderItem={renderDeviceItem}
                 ListEmptyComponent={() => (
                     <Text style={styles.noDevices}>No Bluetooth devices found.</Text>
                 )}
@@ -250,8 +273,8 @@ const BluetoothScanner = () => {
             )}
            {itagData && ( // Conditionally render if data is available
                <View>
-                   <Text>Last Known State: {itagData.state}</Text>
-                   <Text>Last Known Latitude: {itagData.latitude}</Text>
+                   <Text style={styles.deviceName}>Last Known State: {itagData.state}</Text>
+                   <Text style={styles.deviceName}>Last Known Latitude: {itagData.latitude}</Text>
                    <Text>Last Known Longitude: {itagData.longitude}</Text>
                    <Text>Last Updated: {new Date(itagData.timestamp).toLocaleString()}</Text>
                </View>
@@ -311,18 +334,22 @@ const styles = StyleSheet.create({
     color: '#000000', // Black text
     fontSize: 18,
   },
-  button: { // Custom Button Style
+  button: { // Default button style
     backgroundColor: '#000000', // Black background
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 25, // More rounded corners
     marginTop: 15,
   },
-  buttonText: { // Custom Button Text Style
+  buttonText: { // Default button text style
     color: '#FFFFFF', // White text
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
   },
+    buttonDisabled: { // NEW: Style for disabled button
+        opacity: 0.5, // Reduce opacity to fade
+    },
 });
+
 export default BluetoothScanner;
