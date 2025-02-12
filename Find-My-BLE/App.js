@@ -1,4 +1,3 @@
-import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 // Import the functions you need from the SDKs you need
@@ -6,11 +5,21 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import BluetoothScanner from "./src/BluetoothScanner";
 
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+export default function App() {
+  return (
+    <View style={styles.container}>
+      <BluetoothScanner />
+    </View>
+  );
+}
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+    paddingTop: 40,
+  },
+});
 const firebaseConfig = {
   apiKey: "AIzaSyAxemqwyHUVCPNvg3leRWjsvMOcXevjUZ4",
   authDomain: "find-my-db.firebaseapp.com",
@@ -24,21 +33,3 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app); // Initialize Firestore and export it
-
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <BluetoothScanner /> {/* Render the BluetoothScanner component */}
-      <StatusBar style="auto" />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    paddingTop: 40, // Add some top padding for status bar
-  },
-});
-
