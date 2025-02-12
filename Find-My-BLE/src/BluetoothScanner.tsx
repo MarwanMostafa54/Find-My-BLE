@@ -60,6 +60,7 @@ const BluetoothScanner = () => {
             Alert.alert('Data Fetch Error', 'Failed to fetch known device IDs. Check console for details.');
         }
     };
+    
     const reconnectToDevice = async (deviceId: string) => {
         try {
             const device = await bleManager.connectToDevice(deviceId);
@@ -81,6 +82,7 @@ const BluetoothScanner = () => {
             AsyncStorage.removeItem('connectedDeviceId');
         }
     };
+
     const scanForBleDevices = async () => {
         setIsScanning(true);
         setDevices([]);
@@ -103,6 +105,7 @@ const BluetoothScanner = () => {
                 return;
             }
         }
+
         bleManager.startDeviceScan(
             null,
             null,
@@ -127,6 +130,7 @@ const BluetoothScanner = () => {
                 }
             }
         );
+
         setTimeout(async () => {
             bleManager.stopDeviceScan();
             setIsScanning(false);
