@@ -1,0 +1,748 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset default styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Map container */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #f8fafc;
+  z-index: 1;
+  transition: all 0.3s ease-in-out;
+}
+
+/* Legend Container */
+.legend-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 280px;
+  max-width: 350px;
+  overflow: hidden;
+}
+
+.legend-container.expanded {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* Legend Header */
+.legend-header {
+  padding: 16px;
+  cursor: pointer;
+  user-select: none;
+  background: white;
+  transition: background-color 0.2s ease;
+}
+
+.legend-header:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.legend-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.legend-title h3 {
+  color: #1a202c;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.device-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.total-count {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4a5568;
+  background: #f7fafc;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* Status Summary */
+.status-summary {
+  margin-top: 8px;
+}
+
+.status-group {
+  display: flex;
+  gap: 8px;
+}
+
+.status-badge {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.status-badge.active {
+  background: rgba(72, 187, 120, 0.1);
+}
+
+.status-badge.inactive {
+  background: rgba(229, 62, 62, 0.1);
+}
+
+.status-count {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.status-badge.active .status-count {
+  color: #48bb78;
+}
+
+.status-badge.inactive .status-count {
+  color: #e53e3e;
+}
+
+.status-label {
+  font-size: 0.9rem;
+  color: #4a5568;
+}
+
+/* Expand Button */
+.expand-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f7fafc;
+  border: none;
+  color: #4a5568;
+  font-size: 18px;
+  line-height: 28px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.expand-button:hover {
+  background: #edf2f7;
+  transform: scale(1.05);
+}
+
+/* Device Details */
+.device-details {
+  padding: 0 16px 16px;
+  border-top: 1px solid #edf2f7;
+  animation: slideDown 0.3s ease-out;
+}
+
+.device-section {
+  margin-top: 16px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.active {
+  background: #48bb78;
+}
+
+.status-dot.inactive {
+  background: #e53e3e;
+}
+
+/* Device List */
+.device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.device-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f7fafc;
+  transition: all 0.2s ease;
+}
+
+.device-item:hover {
+  background: #edf2f7;
+}
+
+.device-item.warning {
+  background: #fff5f5;
+  border-left: 3px solid #e53e3e;
+}
+
+.device-item.warning:hover {
+  background: #fed7d7;
+}
+
+.device-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.name {
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.time {
+  font-size: 0.8em;
+  color: #718096;
+}
+
+.duration-badge {
+  font-size: 0.8em;
+  color: #e53e3e;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(229, 62, 62, 0.1);
+  font-weight: 500;
+}
+
+/* Custom Scrollbar */
+.device-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.device-list::-webkit-scrollbar-track {
+  background: #f7fafc;
+  border-radius: 3px;
+}
+
+.device-list::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.device-list::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Status Icons */
+.status-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.status-icon .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.status-icon.active {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #4CAF50;
+}
+
+.status-icon.inactive {
+  background-color: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+
+/* Legend Items */
+.legend-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 0.95rem;
+  color: #4a5568;
+}
+
+/* Expanded Content */
+.expanded-content {
+  padding: 0 16px 16px;
+  border-top: 1px solid #edf2f7;
+  animation: slideDown 0.3s ease-out;
+}
+
+/* Section Headers */
+.section-header {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  margin: 8px 0;
+  cursor: pointer;
+  border-radius: 8px;
+  background: #f7fafc;
+  transition: all 0.2s ease;
+  gap: 12px;
+}
+
+.section-header:hover {
+  background: #edf2f7;
+}
+
+.device-count {
+  margin-left: auto;
+  background: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.9em;
+  color: #718096;
+}
+
+.toggle-icon {
+  color: #718096;
+  font-size: 1.2em;
+  width: 24px;
+  text-align: center;
+}
+
+/* Location Items */
+.location-list {
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+}
+
+.location-list.show {
+  max-height: 200px;
+  overflow-y: auto;
+  opacity: 1;
+  margin-top: 8px;
+}
+
+.location-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  margin: 4px 0;
+  border-radius: 8px;
+  background: #f7fafc;
+  transition: all 0.2s ease;
+}
+
+.location-item:hover {
+  background: #edf2f7;
+}
+
+.location-item.long-inactive {
+  background: #fff5f5;
+  border-left: 3px solid #f56565;
+}
+
+.location-item.long-inactive:hover {
+  background: #fed7d7;
+}
+
+.inactive-duration {
+  font-size: 0.8em;
+  color: #e53e3e;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(229, 62, 62, 0.1);
+  font-weight: 500;
+}
+
+/* Custom Scrollbar */
+.location-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.location-list::-webkit-scrollbar-track {
+  background: #f7fafc;
+  border-radius: 3px;
+}
+
+.location-list::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.location-list::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+/* Improved loading and error overlays */
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  backdrop-filter: blur(4px);
+}
+
+.overlay.visible {
+  opacity: 1;
+}
+
+/* Enhanced marker styles */
+.custom-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.custom-marker:hover {
+  transform: scale(1.2);
+}
+
+/* Enhanced popup styles */
+.custom-popup .leaflet-popup-content-wrapper {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.custom-popup .leaflet-popup-content {
+  margin: 0;
+  padding: 16px;
+  min-width: 250px;
+}
+
+.custom-popup .leaflet-popup-tip {
+  background: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.popup-content {
+  animation: fadeSlideUp 0.3s ease-out;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.popup-content h3 {
+  color: #333;
+  margin-bottom: 12px;
+  font-size: 1.1em;
+}
+
+.popup-content p {
+  color: #666;
+  margin: 8px 0;
+  line-height: 1.4;
+}
+
+/* Enhanced map controls */
+.leaflet-control-zoom,
+.leaflet-bar {
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a,
+.leaflet-bar a {
+  background-color: white !important;
+  color: #666 !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 18px !important;
+}
+
+.leaflet-control-zoom a:hover,
+.leaflet-bar a:hover {
+  background-color: #f5f5f5 !important;
+  color: #333 !important;
+  transform: scale(1.05);
+}
+
+.leaflet-control-zoom a:active,
+.leaflet-bar a:active {
+  transform: scale(0.95);
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+/* Error message animation */
+.error-message {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+/* Map pane must be visible */
+.leaflet-pane {
+  z-index: 1;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1000;
+}
+
+/* Status indicator styles */
+.status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.status-indicator.active {
+  background-color: #4CAF50;
+}
+
+.status-indicator.inactive {
+  background-color: #f44336;
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
+}
+
+.overlay.loading {
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+/* Add transition effects */
+.leaflet-fade-anim .leaflet-popup {
+  transition: opacity 0.2s linear;
+}
+
+.location-list {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Stats Panel Styles */
+.stats-panel {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  width: 300px;
+  transition: all 0.3s ease;
+  transform-origin: top left;
+  animation: slideInLeft 0.3s ease-out;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.stats-header h2 {
+  color: #333;
+  font-size: 1.2em;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+  padding: 8px;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 40px;
+  background: #e2e8f0;
+}
+
+.stat-value-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-percentage {
+  font-size: 0.9em;
+  color: #4CAF50;
+  margin-top: 2px;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.9em;
+  color: #718096;
+  margin-top: 4px;
+}
+
+.long-inactive-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.long-inactive-section h3 {
+  color: #e53e3e;
+  font-size: 1em;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.long-inactive-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.inactive-device-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  margin-bottom: 8px;
+  background: #fff5f5;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.inactive-device-item:hover {
+  background: #fed7d7;
+}
+
+.device-name {
+  font-weight: 500;
+  color: #4a5568;
+}
+
+/* Add smooth scrollbar for the inactive list */
+.long-inactive-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.long-inactive-list::-webkit-scrollbar-track {
+  background: #f7fafc;
+  border-radius: 3px;
+}
+
+.long-inactive-list::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.long-inactive-list::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
