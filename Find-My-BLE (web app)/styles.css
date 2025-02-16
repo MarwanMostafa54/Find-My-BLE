@@ -1,0 +1,81 @@
+body {
+    margin: 0;
+    padding: 0;
+}
+
+#map {
+    height: 80vh;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+#legend {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: white;
+    padding: 8px;
+    border-radius: 4px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    z-index: 1000;
+    max-width: 250px;
+}
+
+.legend-item {
+    margin: 3px 0;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.legend-marker {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.legend-marker.active { background-color: #4CAF50; }
+.legend-marker.inactive { background-color: #f44336; }
+
+.location-list {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s;
+    margin-left: 12px;
+    font-size: 0.9em;
+}
+
+.location-list.show {
+    max-height: 150px;
+    overflow-y: auto;
+    border-left: 1px solid #ddd;
+    padding-left: 8px;
+}
+
+.overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 15px;
+    border-radius: 4px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    z-index: 1000;
+    display: none;
+}
+
+/* Remove minimal map styles */
+.leaflet-container,
+.leaflet-control-zoom,
+.leaflet-control-zoom a,
+.leaflet-control-attribution {
+    /* Remove overrides to restore default Leaflet styles */
+}
+
+/* Remove OpenLayers specific styles */
+.ol-control, .ol-zoom {
+    display: none;
+}
