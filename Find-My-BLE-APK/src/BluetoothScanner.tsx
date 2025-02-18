@@ -27,7 +27,6 @@ const BluetoothScanner = () => {
                     [{ text: 'OK' }]
                 );
             }
-            await fetchKnownDeviceIds();
             const savedDeviceId = await AsyncStorage.getItem('connectedDeviceId');
             if (savedDeviceId) {
                 reconnectToDevice(savedDeviceId);
@@ -42,24 +41,7 @@ const BluetoothScanner = () => {
         })();
     }, []);
 
-    const fetchKnownDeviceIds = async () => {
-        try {
-            const apiUrl = 'http://localhost:5000/api/itag_data';
-            const response = await axios.get(apiUrl);
 
-            if (response.status === 200) {
-                const deviceIds = response.data.data.map((item: any) => item.deviceId);
-                setKnownDeviceIds(deviceIds);
-                console.log("Known device IDs:", deviceIds);
-            } else {
-                console.error("Error fetching known device IDs:", response.status, response.data);
-                Alert.alert('Data Fetch Error', `Failed to fetch known device IDs. Status: ${response.status}`);
-            }
-        } catch (error) {
-            console.error("Error fetching known device IDs:", error);
-            Alert.alert('Data Fetch Error', 'Failed to fetch known device IDs. Check console for details.');
-        }
-    };
     
     const reconnectToDevice = async (deviceId: string) => {
         try {

@@ -3,6 +3,18 @@
     "name": "Find-My-BLE",
     "slug": "Find-My-BLE",
     "version": "1.0.0",
+    "platforms": ["android"],
+    "android": {
+      "package": "com.findmyble",
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
     "extra": {
       "eas": {
         "projectId": "43af16b1-e23b-4893-b5ba-daca17e5640c"
