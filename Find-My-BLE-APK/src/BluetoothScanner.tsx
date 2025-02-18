@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Button, Alert, FlatList, PermissionsAndroid, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Button, Alert, FlatList, PermissionsAndroid, Platform, TouchableOpacity, AppState } from 'react-native';
 import * as Location from 'expo-location';
 import { BleManager, Device } from 'react-native-ble-plx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { Linking } from 'react-native';
 
 const BluetoothScanner = () => {
     const [locationPermissionGranted, setLocationPermissionGranted] = useState<boolean | null>(null);
@@ -15,33 +16,153 @@ const BluetoothScanner = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [knownDeviceIds, setKnownDeviceIds] = useState<string[]>([]);
     const scanIntervalId = useRef<NodeJS.Timeout | null>(null);
+    // Add these to your existing state declarations
+    const [permissionChecked, setPermissionChecked] = useState(false);
+    const [locationEnabled, setLocationEnabled] = useState(false);
 
     useEffect(() => {
-        (async () => {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            setLocationPermissionGranted(status === 'granted');
-            if (status !== 'granted') {
-                Alert.alert(
-                    'Location Permission Required',
-                    'To send location data, please grant location permissions in settings.',
-                    [{ text: 'OK' }]
-                );
-            }
-            const savedDeviceId = await AsyncStorage.getItem('connectedDeviceId');
-            if (savedDeviceId) {
-                reconnectToDevice(savedDeviceId);
-            }
+        const checkAndRequestPermissions = async () => {
+            try {
+                // First check if location services are enabled
+                const locationServicesEnabled = await Location.hasServicesEnabledAsync();
+                setLocationEnabled(locationServicesEnabled);
 
-            return () => {
-                bleManager.destroy();
-                if (scanIntervalId.current) {
-                    clearInterval(scanIntervalId.current);
+                if (!locationServicesEnabled) {
+                    Alert.alert(
+                        'Location Services Disabled',
+                        'Please enable location services in your device settings.',
+                        [
+                            {
+                                text: 'Open Settings',
+                                onPress: () => Platform.OS === 'ios' 
+                                    ? Linking.openURL('app-settings:') 
+                                    : Linking.openSettings()
+                            },
+                            { text: 'Cancel' }
+                        ]
+                    );
+                    return;
                 }
-            };
-        })();
+
+                // Check location permission status
+                const { status: locationStatus } = await Location.getForegroundPermissionsAsync();
+                
+                if (locationStatus !== 'granted') {
+                    const { status: newLocationStatus } = await Location.requestForegroundPermissionsAsync();
+                    if (newLocationStatus !== 'granted') {
+                        setLocationPermissionGranted(false);
+                        showPermissionAlert('Location');
+                        return;
+                    }
+                }
+
+                setLocationPermissionGranted(true);
+
+                // Handle Android-specific Bluetooth permissions
+                if (Platform.OS === 'android') {
+                    const bluetoothPermissions = [
+                        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+                        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+                        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+                    ];
+
+                    const granted = await PermissionsAndroid.requestMultiple(bluetoothPermissions);
+                    const allGranted = Object.values(granted).every(
+                        permission => permission === PermissionsAndroid.RESULTS.GRANTED
+                    );
+
+                    if (!allGranted) {
+                        setLocationPermissionGranted(false);
+                        showPermissionAlert('Bluetooth');
+                        return;
+                    }
+                }
+
+                // All permissions granted, check for saved device
+                const savedDeviceId = await AsyncStorage.getItem('connectedDeviceId');
+                if (savedDeviceId) {
+                    reconnectToDevice(savedDeviceId);
+                }
+
+            } catch (error) {
+                console.error('Permission handling error:', error);
+                setLocationPermissionGranted(false);
+            } finally {
+                setPermissionChecked(true);
+            }
+        };
+
+        checkAndRequestPermissions();
+
+        // Add a listener for when the app comes back to foreground
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            if (nextAppState === 'active') {
+                checkAndRequestPermissions();
+            }
+        });
+
+        return () => {
+            subscription.remove();
+            bleManager.destroy();
+            if (scanIntervalId.current) {
+                clearInterval(scanIntervalId.current);
+            }
+        };
     }, []);
 
+    const showPermissionAlert = (permissionType: 'Location' | 'Bluetooth') => {
+        Alert.alert(
+            `${permissionType} Permission Required`,
+            `Please enable ${permissionType.toLowerCase()} permissions in your device settings to use this app.`,
+            [
+                {
+                    text: 'Open Settings',
+                    onPress: () => Platform.OS === 'ios' 
+                        ? Linking.openURL('app-settings:') 
+                        : Linking.openSettings()
+                },
+                { text: 'Cancel' }
+            ]
+        );
+    };
 
+    const requestPermissions = async () => {
+        try {
+            await AsyncStorage.removeItem('locationPermissionGranted');
+            const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
+            
+            if (locationStatus === 'granted') {
+                setLocationPermissionGranted(true);
+                
+                if (Platform.OS === 'android') {
+                    const bluetoothPermissions = [
+                        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+                        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+                        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+                    ];
+
+                    const granted = await PermissionsAndroid.requestMultiple(bluetoothPermissions);
+                    const allGranted = Object.values(granted).every(
+                        permission => permission === PermissionsAndroid.RESULTS.GRANTED
+                    );
+
+                    if (!allGranted) {
+                        showPermissionAlert('Bluetooth');
+                        setLocationPermissionGranted(false);
+                        return;
+                    }
+                }
+            } else {
+                showPermissionAlert('Location');
+                setLocationPermissionGranted(false);
+            }
+        } catch (error) {
+            console.error('Error handling permissions:', error);
+            setLocationPermissionGranted(false);
+        } finally {
+            setPermissionChecked(true);
+        }
+    };
     
     const reconnectToDevice = async (deviceId: string) => {
         try {
@@ -170,17 +291,30 @@ const BluetoothScanner = () => {
     };
 
     const sendDataToDatabase = async (deviceId: string, state: 'active' | 'not_active') => {
-        if (locationPermissionGranted !== true) {
-            console.error('Location permission not granted. Cannot get location.');
-            Alert.alert(
-                'Location Denied',
-                'Location permission is needed to send location data.',
-                [{ text: 'OK' }]
-            );
-            return;
-        }
-
         try {
+            // Check location permission again before getting location
+            const { status } = await Location.getForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                console.error('Location permission not granted. Requesting permission...');
+                const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
+                if (newStatus !== 'granted') {
+                    Alert.alert(
+                        'Location Permission Required',
+                        'Please enable location permission to continue.',
+                        [
+                            {
+                                text: 'Open Settings',
+                                onPress: () => Platform.OS === 'ios' 
+                                    ? Linking.openURL('app-settings:') 
+                                    : Linking.openSettings()
+                            },
+                            { text: 'Cancel' }
+                        ]
+                    );
+                    return;
+                }
+            }
+
             const location = await Location.getCurrentPositionAsync({});
             const { latitude, longitude } = location.coords;
             const apiUrl = 'http://localhost:5000/api/itag_data';
@@ -203,8 +337,8 @@ const BluetoothScanner = () => {
             }
 
         } catch (error) {
-            console.error('Error sending data to MongoDB:', error);
-            Alert.alert('MongoDB Error', 'Failed to send data. Please check console for details.');
+            console.error('Error in sendDataToDatabase:', error);
+            Alert.alert('Error', 'Failed to get location or send data.');
         }
     };
 
