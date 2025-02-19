@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4c79cf96-5a0e-487f-b3b6-6ad76d198a11" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/Find-My-BLE/App.js" beforeDir="false" afterPath="$PROJECT_DIR$/Find-My-BLE/App.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Find-My-BLE/src/BluetoothScanner.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/Find-My-BLE/src/BluetoothScanner.tsx" afterDir="false" />
-    </list>
+    <list default="true" id="4c79cf96-5a0e-487f-b3b6-6ad76d198a11" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

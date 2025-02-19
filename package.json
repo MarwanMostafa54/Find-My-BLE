@@ -1,0 +1,9 @@
+{
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "tr46": "^3.0.0",
+    "whatwg-url": "^13.0.0"
+  }
+}
